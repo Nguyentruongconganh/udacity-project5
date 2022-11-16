@@ -1,0 +1,26 @@
+Dashboard: https://app.serverless.com/anhntc/apps/anhntc-udacity-app/anhntc-udacity-app/dev/us-east-1
+endpoints:
+  GET - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/todos
+  POST - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/todos
+  PATCH - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/todos/{todoId}
+  PUT - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/todos/{todoId}
+  DELETE - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/todos/{todoId}
+  POST - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/todos/{todoId}/attachment
+  GET - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/books
+  POST - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/books
+  PATCH - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/books/{bookId}
+  PUT - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/books/{bookId}
+  DELETE - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/books/{bookId}
+  POST - https://d5jf1vcp2g.execute-api.us-east-1.amazonaws.com/dev/books/{bookId}/attachment
+functions:
+  Auth: anhntc-udacity-app-dev-Auth
+  GetTodos: anhntc-udacity-app-dev-GetTodos
+  CreateTodo: anhntc-udacity-app-dev-CreateTodo
+  UpdateTodo: anhntc-udacity-app-dev-UpdateTodo
+  DeleteTodo: anhntc-udacity-app-dev-DeleteTodo
+  GenerateUploadUrl: anhntc-udacity-app-dev-GenerateUploadUrl
+  GetBooks: anhntc-udacity-app-dev-GetBooks
+  CreateBook: anhntc-udacity-app-dev-CreateBook
+  UpdateBook: anhntc-udacity-app-dev-UpdateBook
+  DeleteBook: anhntc-udacity-app-dev-DeleteBook
+  GenerateUploadUrlBook: anhntc-udacity-app-dev-GenerateUploadUrlBook

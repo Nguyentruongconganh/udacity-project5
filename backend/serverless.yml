@@ -1,0 +1,356 @@
+org: anhntc
+app: anhntc-udacity-app
+service: anhntc-udacity-app
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-reqvalidator-plugin
+  - serverless-plugin-tracing
+  - serverless-aws-documentation
+
+# package:
+# individually: true
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+  tracing:
+    lambda: true
+    apiGateway: true
+
+  environment:
+    PROJECT_NAME: anhntc
+    DB_TODOS_TABLE: anhntc2001-${self:provider.stage}
+    DB_TODOS_TABLE_BOOK: Books-anhntc2001-${self:provider.stage}
+    S3_BUCKET: anhntc2001-${self:provider.stage}
+    EXPIRATION_SIGNED_URL: 600
+
+iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - xray:PutTraceSegments
+      - xray:PutTelemetryRecords
+    Resource:
+      - '*'
+
+custom:
+  documentation:
+    api:
+      info:
+        version: '1.0.2'
+        title: TODO application anhntc
+        description: TODO application anhntc
+      tags:
+        - name: Todos-anhntc
+          description: Todo application anhntc
+    models:
+      - name: CreateTodoRequest
+        contentType: 'application/json'
+        schema: ${file(src/models/create-todo-request.json)}
+      - name: UpdateTodoRequest
+        contentType: 'application/json'
+        schema: ${file(src/models/update-todo-request.json)}
+      - name: CreateBookRequest
+        contentType: 'application/json'
+        schema: ${file(src/models/create-book-request.json)}
+      - name: UpdateBookRequest
+        contentType: 'application/json'
+        schema: ${file(src/models/update-book-request.json)}
+
+functions:
+  Auth:
+    handler: src/lambda/auth/auth0Authorizer.handler
+
+  GetTodos:
+    handler: src/lambda/http/getTodos.handler
+    iamRoleStatementsName: get-todos-function-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE}
+    events:
+      - http:
+          method: get
+          path: todos
+          authorizer: Auth
+          cors: true
+
+  CreateTodo:
+    handler: src/lambda/http/createTodo.handler
+    iamRoleStatementsName: create-todo-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE}
+    events:
+      - http:
+          method: post
+          path: todos
+          authorizer: Auth
+          cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: add new todo
+            description: add new todo
+            requestModels:
+              'application/json': CreateTodoRequest
+
+  UpdateTodo:
+    handler: src/lambda/http/updateTodo.handler
+    iamRoleStatementsName: update-todo-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE}
+    events:
+      - http:
+          method: patch
+          path: todos/{todoId}
+          authorizer: Auth
+          cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update todo item
+            description: Update todo item
+            requestModels:
+              'application/json': UpdateTodoRequest
+      - http:
+          method: put
+          path: todos/{todoId}
+          authorizer: Auth
+          cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update todo item
+            description: Update todo item
+            requestModels:
+              'application/json': UpdateTodoRequest
+
+  DeleteTodo:
+    handler: src/lambda/http/deleteTodo.handler
+    iamRoleStatementsName: delete-todo-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE}
+    events:
+      - http:
+          method: delete
+          path: todos/{todoId}
+          authorizer: Auth
+          cors: true
+
+  GenerateUploadUrl:
+    handler: src/lambda/http/generateUploadUrl.handler
+    iamRoleStatementsName: upload-url-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE}
+      - Effect: Allow
+        Action: s3:PutObject
+        Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
+    events:
+      - http:
+          method: post
+          path: todos/{todoId}/attachment
+          authorizer: Auth
+          cors: true
+  #Create Lamda Book
+  GetBooks:
+    handler: src/lambda/http/getBooks.handler
+    iamRoleStatementsName: get-books-function-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE_BOOK}
+    events:
+      - http:
+          method: get
+          path: books
+          authorizer: Auth
+          cors: true
+
+  CreateBook:
+    handler: src/lambda/http/createBook.handler
+    iamRoleStatementsName: create-book-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action: dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE_BOOK}
+    events:
+      - http:
+          method: post
+          path: books
+          authorizer: Auth
+          cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: add new book
+            description: add new book
+            requestModels:
+              'application/json': CreateBookRequest
+
+  UpdateBook:
+    handler: src/lambda/http/updateBook.handler
+    iamRoleStatementsName: update-book-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE_BOOK}
+    events:
+      - http:
+          method: patch
+          path: books/{bookId}
+          authorizer: Auth
+          cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update book item
+            description: Update book item
+            requestModels:
+              'application/json': UpdateBookRequest
+      - http:
+          method: put
+          path: books/{bookId}
+          authorizer: Auth
+          cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update book item
+            description: Update book item
+            requestModels:
+              'application/json': UpdateBookRequest
+
+  DeleteBook:
+    handler: src/lambda/http/deleteBook.handler
+    iamRoleStatementsName: delete-book-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE_BOOK}
+    events:
+      - http:
+          method: delete
+          path: books/{bookId}
+          authorizer: Auth
+          cors: true
+
+  GenerateUploadUrlBook:
+    handler: src/lambda/http/generateUploadUrlBook.handler
+    iamRoleStatementsName: upload-url-book-role-anhntc
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DB_TODOS_TABLE_BOOK}
+      - Effect: Allow
+        Action: s3:PutObject
+        Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
+    events:
+      - http:
+          method: post
+          path: books/{bookId}/attachment
+          authorizer: Auth
+          cors: true
+
+resources:
+  Resources:
+    TodosDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: todoId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: todoId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.DB_TODOS_TABLE}
+    BooksDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: bookId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: bookId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.DB_TODOS_TABLE_BOOK}
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              MaxAge: 3000
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyPolicy
+          Version: '2012-10-17'
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*'
+        Bucket: !Ref AttachmentsBucket
